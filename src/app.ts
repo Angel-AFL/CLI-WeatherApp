@@ -63,6 +63,11 @@ async function showAllWeather(config: Config): Promise<void> {
   }
 }
 
+function cityLabel(city: City): string {
+  const region = [city.country, city.admin1].filter(Boolean).join(", ");
+  return region ? `${city.name}, ${region}` : city.name;
+}
+
 async function addCity(config: Config): Promise<void> {
   const name = prompt("  Nombre de la ciudad: ")?.trim();
   if (!name) {
@@ -70,12 +75,27 @@ async function addCity(config: Config): Promise<void> {
     return;
   }
   try {
-    const city = await searchCity(name);
+    const results = await searchCity(name);
+    let city: City;
+    if (results.length === 1) {
+      city = results[0]!;
+    } else {
+      results.forEach((result, index) => {
+        console.log(`  ${index + 1}. ${cityLabel(result)}`);
+      });
+      const raw = prompt("  Hay varias coincidencias, selecciona una: ")?.trim();
+      const index = Number(raw) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= results.length) {
+        console.log(red("  Opción inválida."));
+        return;
+      }
+      city = results[index]!;
+    }
     if (config.cities.some((c) => cityKey(c) === cityKey(city))) {
       console.log(red(`  "${city.name}" ya está en la lista.`));
       return;
     }
-    console.log(green(`  Se encontró: ${city.name} (${city.latitude}, ${city.longitude})`));
+    console.log(green(`  Se encontró: ${cityLabel(city)} (${city.latitude}, ${city.longitude})`));
     const answer = prompt("  ¿Quieres agregarla? (s/n): ")?.trim().toLowerCase();
     if (answer !== "s" && answer !== "si") {
       console.log("  Operación cancelada.");

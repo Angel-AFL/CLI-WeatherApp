@@ -1,7 +1,7 @@
 import type { City, Units } from "./types.ts";
 
 interface GeocodingResponse {
-  results?: { name: string; latitude: number; longitude: number }[];
+  results?: { name: string; latitude: number; longitude: number; country?: string; admin1?: string }[];
 }
 
 interface ForecastResponse {
@@ -22,18 +22,24 @@ export class WeatherError extends Error {
   }
 }
 
-export async function searchCity(name: string): Promise<City> {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=es&format=json`;
+export async function searchCity(name: string): Promise<City[]> {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=es&format=json`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new WeatherError("Error al buscar la ciudad, intenta de nuevo");
   }
   const data = (await res.json()) as GeocodingResponse;
-  const result = data.results?.[0];
-  if (!result) {
+  const results = data.results ?? [];
+  if (results.length === 0) {
     throw new CityNotFoundError();
   }
-  return { name: result.name, latitude: result.latitude, longitude: result.longitude };
+  return results.map((result) => ({
+    name: result.name,
+    latitude: result.latitude,
+    longitude: result.longitude,
+    country: result.country,
+    admin1: result.admin1,
+  }));
 }
 
 export async function getWeather(city: City, units: Units): Promise<number> {
