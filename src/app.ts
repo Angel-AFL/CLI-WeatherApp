@@ -1,4 +1,5 @@
 import { getWeather, searchCity } from "./api.ts";
+import { cyan, green, red, yellow } from "./colors.ts";
 import { loadConfig, saveConfig } from "./storage.ts";
 import type { City, Config, Units } from "./types.ts";
 
@@ -7,17 +8,17 @@ const divider = "═".repeat(40);
 const unitSymbol = (units: Units): string => (units === "fahrenheit" ? "°F" : "°C");
 
 function renderMenu(config: Config): void {
-  console.log(divider);
-  console.log("         WEATHER CLI");
-  console.log(divider);
-  console.log(`  1. Clima de ciudad default`);
-  console.log(`  2. Clima de todas las ciudades (${config.cities.length})`);
-  console.log(`  3. Buscar y agregar ciudad`);
-  console.log(`  4. Eliminar ciudad`);
-  console.log(`  5. Establecer ciudad default`);
-  console.log(`  8. Ajustes (${unitSymbol(config.units)})`);
-  console.log(`  9. Salir`);
-  console.log(divider);
+  console.log(cyan(divider));
+  console.log(cyan("         WEATHER CLI"));
+  console.log(cyan(divider));
+  console.log(cyan(`  1. Clima de ciudad default`));
+  console.log(cyan(`  2. Clima de todas las ciudades (${config.cities.length})`));
+  console.log(cyan(`  3. Buscar y agregar ciudad`));
+  console.log(cyan(`  4. Eliminar ciudad`));
+  console.log(cyan(`  5. Establecer ciudad default`));
+  console.log(cyan(`  8. Ajustes (${unitSymbol(config.units)})`));
+  console.log(cyan(`  9. Salir`));
+  console.log(cyan(divider));
 }
 
 function cityKey(city: City): string {
@@ -25,7 +26,7 @@ function cityKey(city: City): string {
 }
 
 function showWeather(city: City, temperature: number, units: Units): void {
-  console.log(`  ${city.name}: ${temperature}${unitSymbol(units)}`);
+  console.log(yellow(`  ${city.name}: ${temperature}${unitSymbol(units)}`));
 }
 
 async function showCityWeather(city: City, units: Units): Promise<void> {
@@ -33,7 +34,7 @@ async function showCityWeather(city: City, units: Units): Promise<void> {
     const temperature = await getWeather(city, units);
     showWeather(city, temperature, units);
   } catch (error) {
-    console.log(`  Error con ${city.name}: ${messageOf(error)}`);
+    console.log(red(`  Error con ${city.name}: ${messageOf(error)}`));
   }
 }
 
@@ -46,7 +47,7 @@ function messageOf(error: unknown): string {
 
 async function showDefaultWeather(config: Config): Promise<void> {
   if (!config.defaultCity) {
-    console.log("  No hay una ciudad default. Usa la opción 5 para establecerla.");
+    console.log(red("  No hay una ciudad default. Usa la opción 5 para establecerla."));
     return;
   }
   await showCityWeather(config.defaultCity, config.units);
@@ -54,7 +55,7 @@ async function showDefaultWeather(config: Config): Promise<void> {
 
 async function showAllWeather(config: Config): Promise<void> {
   if (config.cities.length === 0) {
-    console.log("  No hay ciudades guardadas. Usa la opción 3 para agregar una.");
+    console.log(red("  No hay ciudades guardadas. Usa la opción 3 para agregar una."));
     return;
   }
   for (const city of config.cities) {
@@ -65,16 +66,16 @@ async function showAllWeather(config: Config): Promise<void> {
 async function addCity(config: Config): Promise<void> {
   const name = prompt("  Nombre de la ciudad: ")?.trim();
   if (!name) {
-    console.log("  No ingresaste un nombre.");
+    console.log(red("  No ingresaste un nombre."));
     return;
   }
   try {
     const city = await searchCity(name);
     if (config.cities.some((c) => cityKey(c) === cityKey(city))) {
-      console.log(`  "${city.name}" ya está en la lista.`);
+      console.log(red(`  "${city.name}" ya está en la lista.`));
       return;
     }
-    console.log(`  Se encontró: ${city.name} (${city.latitude}, ${city.longitude})`);
+    console.log(green(`  Se encontró: ${city.name} (${city.latitude}, ${city.longitude})`));
     const answer = prompt("  ¿Quieres agregarla? (s/n): ")?.trim().toLowerCase();
     if (answer !== "s" && answer !== "si") {
       console.log("  Operación cancelada.");
@@ -82,15 +83,15 @@ async function addCity(config: Config): Promise<void> {
     }
     config.cities.push(city);
     await saveConfig(config);
-    console.log(`  "${city.name}" agregada.`);
+    console.log(green(`  "${city.name}" agregada.`));
   } catch (error) {
-    console.log(`  ${messageOf(error)}`);
+    console.log(red(`  ${messageOf(error)}`));
   }
 }
 
 function selectCity(config: Config): City | null {
   if (config.cities.length === 0) {
-    console.log("  No hay ciudades guardadas.");
+    console.log(red("  No hay ciudades guardadas."));
     return null;
   }
   config.cities.forEach((city, index) => {
@@ -99,7 +100,7 @@ function selectCity(config: Config): City | null {
   const raw = prompt("  Selecciona una ciudad: ")?.trim();
   const index = Number(raw) - 1;
   if (!Number.isInteger(index) || index < 0 || index >= config.cities.length) {
-    console.log("  Opción inválida.");
+    console.log(red("  Opción inválida."));
     return null;
   }
   return config.cities[index] ?? null;
@@ -114,10 +115,10 @@ async function removeCity(config: Config): Promise<void> {
   config.cities.splice(index, 1);
   if (config.defaultCity && cityKey(config.defaultCity) === cityKey(city)) {
     config.defaultCity = null;
-    console.log("  Se eliminó la ciudad default.");
+    console.log(green("  Se eliminó la ciudad default."));
   }
   await saveConfig(config);
-  console.log(`  "${city.name}" eliminada.`);
+  console.log(green(`  "${city.name}" eliminada.`));
 }
 
 async function setDefaultCity(config: Config): Promise<void> {
@@ -127,13 +128,13 @@ async function setDefaultCity(config: Config): Promise<void> {
   }
   config.defaultCity = city;
   await saveConfig(config);
-  console.log(`  "${city.name}" establecida como ciudad default.`);
+  console.log(green(`  "${city.name}" establecida como ciudad default.`));
 }
 
 async function toggleUnits(config: Config): Promise<void> {
   config.units = config.units === "celsius" ? "fahrenheit" : "celsius";
   await saveConfig(config);
-  console.log(`  Unidades cambiadas a ${unitSymbol(config.units)}.`);
+  console.log(green(`  Unidades cambiadas a ${unitSymbol(config.units)}.`));
 }
 
 export async function run(): Promise<void> {
@@ -165,7 +166,7 @@ export async function run(): Promise<void> {
         running = false;
         break;
       default:
-        console.log("  Opción inválida, intenta de nuevo.");
+        console.log(red("  Opción inválida, intenta de nuevo."));
     }
     if (running) {
       console.log();
